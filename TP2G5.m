@@ -7,22 +7,25 @@ elementType='Q8';          %'CST' 'LST' 'Q4' 'Q8' 'Q9'
 problemType='Stress';       %'Stress' 'Strain' 'Axisymmetric'
 nDimensions=2;              %Problem dimension
 % Mesh generation
-t = 2; %mm
+t = 1; %mm
 
 % [elementNodesArray,nodesPositionArray,vertexNodes,sideNodes]=quadrilateralDomainMeshGenerator(elementType,shape,mLength,mHeight,nElementsInLength,nElementsInHeight,ang,distortion);
-% name = 'Malla1.csv';
-% [elementNodesArray,nodesPositionArray,sideWest,sideEast] = ReadData(name);
-elementNodesArray = load('conectividades.mat');
-elementNodesArray = elementNodesArray.element;
-nodesPositionArray = load('nodos.mat');
-nodesPositionArray = nodesPositionArray.nodos;
-meshPlot(elementNodesArray,nodesPositionArray,'b','No');
+nodesData = 'Nodos_prueba.csv';
+conecData = 'Conectividades_prueba.txt';
+[nodesPositionArray,elementNodesArray] = DataRead(nodesData,conecData);
 
 %ubicacion de lados
 val = min(nodesPositionArray(:,1));
-sideWest = find(nodesPositionArray(:,1)==val); %nodos lado 4(oeste)
+nodesWest = find(nodesPositionArray(:,1)==val); 
+nodesWest = [nodesWest nodesPositionArray(nodesWest,:)];
+sideWest = sortrows(nodesWest,3,'descend'); %ordeno descendente en y
+sideWest = sideWest(:,1); %nodos lado 4(oeste)
 val = max(nodesPositionArray(:,1));
-sideEast = find(nodesPositionArray(:,1)==val); %nodos lado 4(este)
+nodesEast = find(nodesPositionArray(:,1)==val); 
+nodesEast = [nodesEast nodesPositionArray(nodesEast,:)];
+sideEast = sortrows(nodesEast,3,'descend'); %ordeno descendente en y
+sideEast = sideEast(:,1); %nodos lado 2(este)
+
 
 nElements=size(elementNodesArray,1);    %Number of elements
 nNodes=size(nodesPositionArray,1);      %Number of nodes
@@ -30,7 +33,7 @@ nTotalDof=nNodes*nDimensions;           %Number of total dofs
 
 % Material properties
 E = 200000;%Mpa
-nu = 0.3;
+nu = 0.25;
 [constitutiveMatrix] = constitutiveIsotropicMatrix(problemType,E,nu);
 
 % Boundary conditions
@@ -44,8 +47,8 @@ pointLoadsArray = zeros(nNodes,nDimensions);            % Point load nodal value
 % % pointLoadsArray (sideNodes(2,2:2:end),1) = 2*pointLoadsArray (sideNodes(2,2:2:end),1);
 % % pointLoadsArray (vertexNodes(2),1) = -1/6;
 % % pointLoadsArray (vertexNodes(4),1) =  1/6;
-pointLoadsArray(sideEast,1) = 1000; %N
-pointLoadsArray(sideEast,end) = -1000; %N
+pointLoadsArray(sideEast(1),1) = -10; %N
+pointLoadsArray(sideEast(end),1) = 10; %N
 %% Solver
 
 % Stiffness calculation and assembly
@@ -65,12 +68,14 @@ displacementsReducedVector = stiffnessMatrix(isFree,isFree)\loadsVector(isFree);
 displacementsVector = zeros(nTotalDof,1);
 displacementsVector(isFree) = displacementsVector(isFree) + displacementsReducedVector;
 %% Postprocess
+deformations = reshape(displacementsVector,nDimensions,nNodes)';
 %Stress recovery
 [elementStressAtNodes]=stressRecovery(elementType,elementNodesArray,nodesPositionArray,constitutiveMatrix,displacementsVector);
 
 % Deformed plot
-% meshPlot(elementNodesArray,nodesPositionArray+reshape(displacementsVector,nDimensions,nNodes)','b','Yes');
+meshPlot(elementNodesArray,nodesPositionArray+reshape(displacementsVector,nDimensions,nNodes)','b','Yes');
 
 % Stresses plot
-bandPlot(elementNodesArray,nodesPositionArray+reshape(displacementsVector,nDimensions,nNodes)',squeeze(elementStressAtNodes(:,:,1)));
+% bandPlot(elementNodesArray,nodesPositionArray+reshape(displacementsVector,nDimensions,nNodes)',squeeze(elementStressAtNodes(:,:,1)));
+% bandPlot(elementNodesArray,nodesPositionArray+reshape(displacementsVector,nDimensions,nNodes)',reshape(displacementsVector,nDimensions,nNodes)');
 toc
