@@ -77,7 +77,7 @@ for iElement = 1:nElements
     elementalNodesPosition = nodesPositionArray(elementNodesArray(iElement,:),:);
     for iPoint = 1:nPoints
         
-        % Jacobian calculation at Gauss point
+        % Jacobian calculation at nodal positions
         jacobian = shapeFunctionsDerivatives(:,:,iPoint)*elementalNodesPosition;
         jacobianDeterminant=det(jacobian);
         
