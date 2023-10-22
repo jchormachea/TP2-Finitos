@@ -2,7 +2,7 @@ function [nodes,conectivities] = DataRead(nodesData,conecData)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 nodos = readmatrix(nodesData);
-nodos(:,[1,4]) = '';%me quedo solo con x e y
+nodos = nodos(:,[2 3]);%me quedo solo con coordenadas x e y
 iter = 1;
 fid = fopen(conecData,'r');
 element = [];%vector
