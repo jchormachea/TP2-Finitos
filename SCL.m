@@ -1,4 +1,4 @@
-function [Sm,Sb,Sf] = SCL(nodesPositionArray,elementNodesArray, sideWest,elementStressAtNodes)
+function [Sm,Sb,Sf,SmNx,SbNx,SfNx] = SCL(Sy, nodesPositionArray,elementNodesArray, sideWest,elementStressAtNodes,stressNx)
 
 % stress clasification line
 tSCL =  abs(nodesPositionArray(sideWest(1),2)-nodesPositionArray(sideWest(end),2));
@@ -18,14 +18,16 @@ for i = 1:size(sideWest,1)
         stressAtWestNode(i,2) = elementStressAtNodes(fil,col,2);
         stressAtWestNode(i,3) = elementStressAtNodes(fil,col,3);        
     end    
-    y(i) = nodesPositionArray(sideWest(i),2);
-    stressBending(i,1) = stressAtWestNode(i,1)*(0.5*tSCL-y(i));
-    stressBending(i,2) = stressAtWestNode(i,2)*(0.5*tSCL-y(i));
-    stressBending(i,3) = stressAtWestNode(i,3)*(0.5*tSCL-y(i));  
-    
+    y(i) = nodesPositionArray(sideWest(i),2);    
 end
+%escalado
+fscale = Sy/max(stressAtWestNode(:,1));
+stressAtWestNode = fscale*stressAtWestNode(:,:); %llevo Sx a fluencia.
+fscaleNx = Sy/max(stressNx(:,2)); %llevo Sx a fluencia.
+stressNx(:,2) = fscaleNx*stressNx(:,2);
+stressNx(:,3) = fscaleNx*stressNx(:,3);
 
-
+%matlab SCL
 Sxxm = trapz(y,stressAtWestNode(:,1))/tSCL;
 Syym = trapz(y,stressAtWestNode(:,2))/tSCL;
 Sxym = trapz(y,stressAtWestNode(:,3))/tSCL;
@@ -36,22 +38,45 @@ SxxF = stressAtWestNode(end,1)-(Sxxm-Sxxb);
 SyyF = stressAtWestNode(end,2)-(Syym);
 SxyF = stressAtWestNode(end,3)-(Sxym);
 
-SvmFEA =sqrt(stressAtWestNode(end,1)^2+stressAtWestNode(end,2)^2+3*stressAtWestNode(end,3)^2); 
+SvmFEA = (stressAtWestNode(:,1).^2+stressAtWestNode(:,2).^2+3*stressAtWestNode(:,3).^2).^0.5;
 Svmm = sqrt(Sxxm^2+Syym^2+3*Sxym^2);
-Svmb = Sxxb;
+Svmb = abs(Sxxb);
 SvmF = sqrt(SxxF^2+SyyF^2+3*SxyF^2);
-SvmF2 = SvmFEA -(Svmm-Svmb); %esta da mas chica que la SvmF
 
 stressLine = abs(Sxxb).*(2/tSCL.*y-1)+Sxxm;
+
+%Nx SCL (el corte es nulo por eso no se exportó)
+SxxmNx = trapz(stressNx(:,1),stressNx(:,2))/tSCL;
+SyymNx = trapz(stressNx(:,1),stressNx(:,3))/tSCL;
+SxxbNx = trapz(stressNx(:,1),stressNx(:,2).*(tSCL/2-stressNx(:,1)))*6/tSCL^2;
+SxxFNx = stressNx(end,2)-(SxxmNx-SxxbNx);
+SyyFNx = stressNx(end,3)-(SyymNx);
+
+SvmFEANx = (stressNx(:,2).^2+stressNx(:,3).^2).^0.5;
+SvmmNx = sqrt(SxxmNx^2+SyymNx^2);
+SvmbNx = abs(SxxbNx);
+SvmFNx = sqrt(SxxFNx^2+SyyFNx^2);
+
+stressLineNx = abs(SxxbNx).*(2/tSCL.*stressNx(:,1)-1)+SxxmNx;
+
+
 figure
-plot(y,stressAtWestNode(:,1))
+plot(y,stressAtWestNode(:,1),'b')
+% plot(y,SvmFEA,'b')
 grid on; hold on
-plot(y,stressLine)
+plot(stressNx(:,1),stressNx(:,2),'k-.') %tension en x de Nx
+plot(y,stressLine,'r')
+plot(stressNx(:,1),stressLineNx,'m*')
 title('stress xx: FEA and Sm+Sb')
-legend('FEA', '\sigma_m+\sigma_b')
+legend('MATLAB FEA', 'Nx FEA', '\sigma_m+\sigma_b MATLAB', '\sigma_m+\sigma_b Nx')
+ylim([Sxxb 260]) 
 
 Sm = [Sxxm Syym Sxym Svmm];
 Sb = [Sxxb Svmb];
 Sf = [SxxF SyyF SxyF SvmF];
+
+SmNx = [SxxmNx SyymNx SvmmNx];
+SbNx = [SxxbNx SvmbNx];
+SfNx = [SxxFNx SyyFNx SvmFNx];
 
 end

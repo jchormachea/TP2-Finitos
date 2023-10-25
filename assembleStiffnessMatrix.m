@@ -27,7 +27,7 @@ switch elementType
         elementShape='Quadrilateral';
     case 'Q8'
         nDimensions = 2;                                %Problem dimension
-        nGaussPoints = 9;%lo normal es 4
+        nGaussPoints = 9;%lo normal es 4 pero Nx usa 9
         elementShape='Quadrilateral';
     case 'Q9'
         nDimensions = 2;                                %Problem dimension
